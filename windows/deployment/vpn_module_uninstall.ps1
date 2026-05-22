@@ -1,3 +1,43 @@
+# =============================================================================
+# Script:   vpn_module_uninstall.ps1
+# Purpose:  Uninstalls the Cisco Secure Client AnyConnect VPN module and all
+#           dependent Secure Client modules (Umbrella and ZTA) and Duo Desktop
+#           from Windows endpoints managed through Microsoft Intune.
+#
+# Overview:
+#   This script follows a three-phase sequence:
+#     1. Runs disable_lockdown.ps1 to remove any active tamper resistance
+#        controls from all Cisco Secure Client and Duo Desktop components.
+#     2. Silently uninstalls any Cisco Secure Client modules that depend on
+#        the VPN Core module (Umbrella, ZTA) and Duo Desktop, if present.
+#     3. Silently uninstalls the AnyConnect VPN Core module itself.
+#
+#   Note: The lockdown script is NOT re-executed after uninstallation, as
+#   all Secure Client modules will have been removed. If your environment
+#   includes Secure Client modules beyond VPN, Umbrella, and ZTA that do
+#   not depend on the VPN Core module, this script must be modified to
+#   preserve those modules and re-apply tamper resistance controls after
+#   uninstallation. This use case is outside the scope of this guide.
+#
+#   This script is intended to be deployed as the uninstall command of the
+#   Cisco Secure Client VPN Win32 application in Microsoft Intune.
+#
+# Usage:
+#   powershell.exe -NoProfile -ExecutionPolicy Bypass -File "vpn_module_uninstall.ps1"
+#
+# Configuration:
+#   - Update $installerName to match the exact filename of the AnyConnect VPN
+#     MSI included in the .intunewin package for your target version.
+#     Example: "cisco-secure-client-win-arm64-5.1.15.287-core-vpn-predeploy-k9.msi"
+#
+# Requirements:
+#   - disable_lockdown.ps1 must be present in the same directory as this script.
+#   - The AnyConnect VPN MSI installer must be present in the same directory
+#     as this script.
+#   - Script must be executed in the SYSTEM account context, as is the case
+#     when deployed via Intune.
+# =============================================================================
+
 # Define the MSI installer filename (in the same directory as this script)
 $installerName = "cisco-secure-client-win-arm64-5.1.15.287-core-vpn-predeploy-k9.msi"
 
