@@ -148,8 +148,8 @@ $securityDescriptors_registry | Where-Object { $_.correctDescriptor -eq $false }
     }
 }
 
-# Locates all Cisco Secure Client and Duo uninstall registry entries, restores their ACLs, and removes the NoRemove flag
-$noRemove_remediation = @()
+# Locates all Cisco Secure Client and Duo uninstall registry entries, restores their ACLs, and removes the SystemComponent flag
+$systemComponent_remediation = @()
 $installedModules = @(
     Get-ItemProperty `
         HKLM:\Software\Microsoft\Windows\CurrentVersion\Uninstall\*, `
@@ -211,30 +211,30 @@ $installedModules | ForEach-Object {
         $aclRestored = $false
     }
 
-    # Removes the NoRemove registry value only after the ACL has been fully restored to ensure the write is not blocked
-    $noRemoveRemoved = $false
+    # Removes the SystemComponent registry value only after the ACL has been fully restored to ensure the write is not blocked
+    $systemComponentRemoved = $false
     if ($aclRestored) {
         try {
-            Remove-ItemProperty -Path $module.PSPath -Name "NoRemove" -Force -ErrorAction Stop
-            $noRemoveRemoved = $true
+            Remove-ItemProperty -Path $module.PSPath -Name "SystemComponent" -Force -ErrorAction Stop
+            $systemComponentRemoved = $true
         }
         catch {
-            $noRemoveRemoved = $false
+            $systemComponentRemoved = $false
         }
     }
 
-    $noRemove_remediation += [PSCustomObject]@{
-        "moduleName"      = $module.DisplayName
-        "aclRestored"     = $aclRestored
-        "noRemoveRemoved" = $noRemoveRemoved
+    $systemComponent_remediation += [PSCustomObject]@{
+        "moduleName"              = $module.DisplayName
+        "aclRestored"             = $aclRestored
+        "systemComponentRemoved"  = $systemComponentRemoved
     }
 }
 
 # Emits all remediation results as a single compressed JSON object
 Write-Host ([PSCustomObject]@{
-    "serviceSddl"  = $sddl_service_remediation
-    "registrySddl" = $sddl_registry_remediation
-    "noRemove"     = $noRemove_remediation
+    "serviceSddl"       = $sddl_service_remediation
+    "registrySddl"      = $sddl_registry_remediation
+    "systemComponent"   = $systemComponent_remediation
 } | ConvertTo-Json -Compress)
 
 exit 0
