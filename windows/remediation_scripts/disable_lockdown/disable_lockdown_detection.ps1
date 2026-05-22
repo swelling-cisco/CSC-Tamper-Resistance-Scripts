@@ -1,3 +1,76 @@
+# =============================================================================
+# Script:   disable_lockdown_detection.ps1
+# Purpose:  Detects whether tamper resistance controls applied by the lockdown
+#           script are currently active on Cisco Secure Client modules and Duo
+#           Desktop components on Windows endpoints. Used by Microsoft Intune
+#           as the detection script in the CSC Disable Lockdown remediation
+#           script pair.
+#
+# Overview:
+#   This script is the detection counterpart to disable_lockdown_remediation.ps1
+#   and evaluates whether the lockdown controls applied by the lockdown script
+#   are still present across three surfaces, reporting its findings as a
+#   compressed JSON object before exiting with the appropriate code:
+#
+#     1. SCM-level descriptor: Compares the current SCM-level SDDL of each
+#        present service against the known lockdown descriptor. A match
+#        indicates the lockdown is still active on that service.
+#     2. Registry ACL: Compares the current registry ACL of each present
+#        service key under HKLM\SYSTEM\CurrentControlSet\Services against
+#        the known lockdown descriptor. All services share the same lockdown
+#        registry SDDL for detection purposes — the registrySddlKey property
+#        is only relevant during restoration in the remediation script.
+#     3. Uninstall key state: Checks each Cisco Secure Client and Duo Desktop
+#        uninstall registry entry for two conditions:
+#          - systemComponentSet: Whether the SystemComponent flag is present,
+#            which hides the module from Add or Remove Programs.
+#          - isLocked: Whether the lockdown ACL is still applied to the
+#            uninstall key, which prevents the SystemComponent flag and other
+#            values from being modified.
+#
+#   Unlike the lockdown_detection.ps1 script, which exits with code 1 when
+#   lockdown controls are absent, this script exits with code 1 when lockdown
+#   controls are present, as its purpose is to confirm that the lockdown has
+#   been successfully removed. If any service SCM descriptor, registry ACL,
+#   SystemComponent flag, or uninstall key ACL still matches the lockdown
+#   configuration, the script exits with code 1, prompting Intune to execute
+#   the paired disable lockdown remediation script.
+#
+#   WARNING: This script pair must never be assigned to the same device scope
+#   as the CSC Lockdown remediation script pair in Intune. Doing so will create
+#   a continuous enforcement conflict that undermines tamper resistance entirely.
+#   Refer to the Enforcing Remediation Scripts section of the guide for full
+#   details on safe scoping of this script pair.
+#
+# Usage:
+#   Uploaded as the detection script of the CSC Disable Lockdown remediation
+#   script pair in the Intune Remediations console. Can also be tested locally
+#   using PsExec in the SYSTEM account context:
+#   ./PsExec.exe -i -s powershell.exe -ExecutionPolicy Bypass -File "disable_lockdown_detection.ps1"; $LASTEXITCODE
+#
+# Configuration:
+#   - The $services array at the top of the script defines which services are
+#     evaluated for lockdown state. This list must match the services defined
+#     in the paired disable_lockdown_remediation.ps1 script and should also
+#     match the services defined in the lockdown scripts to ensure consistent
+#     behavior across the full tamper resistance framework.
+#   - If your environment does not use all of the modules covered in this
+#     guide, remove the corresponding service entries from the array. If your
+#     environment includes additional Secure Client modules beyond those
+#     covered in this guide, add their service names to the array.
+#   - To identify the service name for a given Cisco Secure Client or Duo
+#     Desktop component, run the following command in PowerShell:
+#
+#       Get-Service | Where-Object { $_.DisplayName -like "*Cisco*" -or $_.DisplayName -like "*Duo*" } | Select-Object Name, DisplayName
+#
+# Exit Codes:
+#   0 — No lockdown controls are detected. All SCM descriptors, registry ACLs,
+#       SystemComponent flags, and uninstall key ACLs have been confirmed as
+#       removed. Intune will take no action.
+#   1 — One or more lockdown controls are still active. Intune will execute
+#       the paired disable lockdown remediation script to remove them.
+# =============================================================================
+
 [CmdletBinding()]
 param ()
 
