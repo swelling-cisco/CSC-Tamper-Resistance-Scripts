@@ -87,8 +87,8 @@ $services | Where-Object { $_.exists -eq $true } | ForEach-Object {
     }
 }
 
-# Checks each Cisco Secure Client and Duo uninstall entry for the presence of the NoRemove flag and the lockdown uninstall ACL
-$noRemove_states = @()
+# Checks each Cisco Secure Client and Duo uninstall entry for the presence of the SystemComponent flag and the lockdown uninstall ACL
+$systemComponent_states = @()
 $installedModules = @(
     Get-ItemProperty `
         HKLM:\Software\Microsoft\Windows\CurrentVersion\Uninstall\*, `
@@ -98,9 +98,9 @@ $installedModules = @(
 )
 
 $installedModules | ForEach-Object {
-    $module        = $_
-    $noRemoveValue = $module.NoRemove
-    $isLocked      = $false
+    $module                = $_
+    $systemComponentValue  = $module.SystemComponent
+    $isLocked              = $false
 
     try {
         $acl = Get-Acl $module.PSPath -ErrorAction Stop
@@ -113,19 +113,19 @@ $installedModules | ForEach-Object {
         $isLocked = $true
     }
 
-    $noRemove_states += [PSCustomObject]@{
-        "moduleName"  = $module.DisplayName
-        "noRemoveSet" = ($noRemoveValue -eq 1)
-        "isLocked"    = $isLocked
+    $systemComponent_states += [PSCustomObject]@{
+        "moduleName"         = $module.DisplayName
+        "systemComponentSet" = ($systemComponentValue -eq 1)
+        "isLocked"           = $isLocked
     }
 }
 
 # Emits all detection findings as a single compressed JSON object
 Write-Host ([PSCustomObject]@{
-    "missing"  = $missing_services
-    "services" = $securityDescriptors_services
-    "registry" = $securityDescriptors_registry
-    "noRemove" = $noRemove_states
+    "missing"         = $missing_services
+    "services"        = $securityDescriptors_services
+    "registry"        = $securityDescriptors_registry
+    "systemComponent" = $systemComponent_states
 } | ConvertTo-Json -Compress)
 
 # Returns exit code 1 if any service SCM-level SDDL still matches the lockdown descriptor
@@ -138,13 +138,13 @@ if ($securityDescriptors_registry.isLocked -contains $true) {
     exit 1
 }
 
-# Returns exit code 1 if the NoRemove flag is still present on any Cisco Secure Client or Duo module
-if ($noRemove_states.noRemoveSet -contains $true) {
+# Returns exit code 1 if the SystemComponent flag is still present on any Cisco Secure Client or Duo module
+if ($systemComponent_states.systemComponentSet -contains $true) {
     exit 1
 }
 
 # Returns exit code 1 if any uninstall key ACL still matches the lockdown descriptor
-if ($noRemove_states.isLocked -contains $true) {
+if ($systemComponent_states.isLocked -contains $true) {
     exit 1
 }
 
