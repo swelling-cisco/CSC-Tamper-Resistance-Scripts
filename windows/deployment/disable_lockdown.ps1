@@ -1,3 +1,67 @@
+# =============================================================================
+# Script:   disable_lockdown.ps1
+# Purpose:  Removes tamper resistance controls applied by lockdown.ps1 from
+#           all installed Cisco Secure Client modules and Duo Desktop components
+#           on Windows endpoints, allowing install and uninstall operations to
+#           proceed without being blocked by the active lockdown configuration.
+#
+# Overview:
+#   This script is the counterpart to lockdown.ps1 and is responsible for
+#   reversing the tamper resistance controls applied to the endpoint. When
+#   executed, it restores permissive security descriptors and ACLs across
+#   the same three surfaces targeted by the lockdown script:
+#
+#     1. SCM-level descriptor: Restores standard SCM access permissions for
+#        SYSTEM, Administrators, Interactive Users, and Service accounts,
+#        allowing the service to be stopped, started, and modified as needed
+#        during the install or uninstall operation.
+#     2. Registry ACL: Restores the original registry key permissions for each
+#        targeted service key, removing the deny-based ACEs applied by the
+#        lockdown script. Two variants of the restored SDDL are used depending
+#        on the original owner of the key prior to lockdown — registry_sy for
+#        SYSTEM-owned keys (Cisco Secure Client services) and registry_ba for
+#        Administrators-owned keys (acsock and Duo Desktop services).
+#     3. Uninstall key ACL: Restores inherited permissions on all Cisco Secure
+#        Client and Duo Desktop uninstall registry entries by re-enabling ACL
+#        inheritance and removing all explicit Deny ACEs applied by the lockdown
+#        script. The SystemComponent flag is intentionally preserved so that
+#        modules remain hidden from Add or Remove Programs during the install
+#        or uninstall operation.
+#
+#   This script requires elevated token privileges (SeRestorePrivilege,
+#   SeTakeOwnershipPrivilege, and SeTcbPrivilege) to take ownership of and
+#   modify registry keys that were locked down by the lockdown script. These
+#   privileges are enabled at runtime via an inline C# type definition.
+#
+#   This script is designed to be called as the first step of any Cisco Secure
+#   Client module install or uninstall operation. The lockdown script should
+#   always be executed immediately after the operation completes to restore
+#   the full tamper resistance configuration.
+#
+# Usage:
+#   powershell.exe -NoProfile -ExecutionPolicy Bypass -File "disable_lockdown.ps1"
+#
+# Configuration:
+#   - The $services array at the top of the script defines which services are
+#     targeted for lockdown removal. This list should match the services defined
+#     in lockdown.ps1 to ensure consistent behavior across both scripts. Each
+#     entry includes a registrySddlKey property that controls which restored
+#     SDDL variant is applied to that service's registry key:
+#       - "registry_sy" — used for SYSTEM-owned service keys (Cisco Secure
+#         Client services: csc_vpnagent, csc_umbrellaagent, csc_swgagent,
+#         csc_zta_agent)
+#       - "registry_ba" — used for Administrators-owned service keys (acsock
+#         and Duo Desktop services)
+#   - To identify the service name for a given Cisco Secure Client or Duo
+#     Desktop component, run the following command in PowerShell:
+#
+#       Get-Service | Where-Object { $_.DisplayName -like "*Cisco*" -or $_.DisplayName -like "*Duo*" } | Select-Object Name, DisplayName
+#
+# Requirements:
+#   - Script must be executed in the SYSTEM account context, as is the case
+#     when deployed via Intune or invoked by the module install/uninstall scripts.
+# =============================================================================
+
 [CmdletBinding()]
 param ()
 
