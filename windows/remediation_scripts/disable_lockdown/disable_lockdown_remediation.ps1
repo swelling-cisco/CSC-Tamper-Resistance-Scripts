@@ -231,10 +231,10 @@ $installedModules | ForEach-Object {
 }
 
 # Emits all remediation results as a single compressed JSON object
-Write-Host ([PSCustomObject]@{
-    "serviceSddl"       = $sddl_service_remediation
-    "registrySddl"      = $sddl_registry_remediation
-    "systemComponent"   = $systemComponent_remediation
-} | ConvertTo-Json -Compress)
+#Write-Host ([PSCustomObject]@{
+#    "serviceSddl"       = $sddl_service_remediation
+#    "registrySddl"      = $sddl_registry_remediation
+#    "systemComponent"   = $systemComponent_remediation
+#} | ConvertTo-Json -Compress)
 
 exit 0
