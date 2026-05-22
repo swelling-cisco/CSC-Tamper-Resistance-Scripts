@@ -19,7 +19,7 @@ $securityDescriptor = [PSCustomObject]@{
     "service"   = "D:(A;;CCDCLCSWRPWPDTLOCRSDRCWDWO;;;SY)(A;;CCLCSWLOCRRC;;;IU)S:(AU;FA;CCDCLCSWRPWPDTLOCRSDRCWDWO;;;WD)"
     # Applied via Set-Acl to the service registry key — denies write access to Administrators and standard users; grants full control to SYSTEM
     "registry"  = "O:SYG:SYD:PAI(D;;KW;;;BA)(D;;KW;;;BU)(A;;KA;;;SY)"
-    # Applied via Set-Acl to the uninstall registry key — prevents modification of the NoRemove flag by non-SYSTEM accounts
+    # Applied via Set-Acl to the uninstall registry key — prevents modification of the SystemComponent flag by non-SYSTEM accounts
     "uninstall" = "O:SYG:SYD:PAI(D;;KW;;;BA)(D;;KW;;;BU)(A;;KA;;;SY)"
 }
 
@@ -114,8 +114,8 @@ $securityDescriptors_registry | Where-Object { $_.correctDescriptor -eq $false }
     }
 }
 
-# Locates all Cisco Secure Client and Duo uninstall registry entries, sets the NoRemove flag, and applies a protective ACL
-$noRemove_remediation = @()
+# Locates all Cisco Secure Client and Duo uninstall registry entries, sets the SystemComponent flag, and applies a protective ACL
+$systemComponent_remediation = @()
 $installedModules = @(
     Get-ItemProperty HKLM:\Software\Microsoft\Windows\CurrentVersion\Uninstall\*, HKLM:\SOFTWARE\Wow6432Node\Microsoft\Windows\CurrentVersion\Uninstall\* -ErrorAction SilentlyContinue |
     Where-Object { ($_.DisplayName -like "Cisco Secure Client*") -or ($_.DisplayName -like "*Duo*") }
@@ -123,27 +123,27 @@ $installedModules = @(
 $installedModules | ForEach-Object {
     $module = $_
 
-    # Writes the NoRemove DWORD value before applying the ACL to ensure the write is not blocked by subsequent deny rules
-    New-ItemProperty -Path $module.PSPath -Name "NoRemove" -Value 1 -PropertyType DWord -Force -ErrorAction SilentlyContinue | Out-Null
+    # Writes the SystemComponent DWORD value before applying the ACL to ensure the write is not blocked by subsequent deny rules
+    New-ItemProperty -Path $module.PSPath -Name "SystemComponent" -Value 1 -PropertyType DWord -Force -ErrorAction SilentlyContinue | Out-Null
 
     # Applies the protective ACL to lock down the uninstall key against modification
     try {
         $acl = Get-Acl $module.PSPath -ErrorAction Stop
         $acl.SetSecurityDescriptorSddlForm($securityDescriptor.uninstall)
         Set-Acl -Path $module.PSPath -AclObject $acl -ErrorAction Stop
-        $noRemove_remediation += [PSCustomObject]@{ "moduleName" = $module.DisplayName; "success" = $true }
+        $systemComponent_remediation += [PSCustomObject]@{ "moduleName" = $module.DisplayName; "success" = $true }
     }
     catch {
-        $noRemove_remediation += [PSCustomObject]@{ "moduleName" = $module.DisplayName; "success" = $false }
+        $systemComponent_remediation += [PSCustomObject]@{ "moduleName" = $module.DisplayName; "success" = $false }
     }
 }
 
 # Emits all remediation results as a single compressed JSON object
 Write-Host ([PSCustomObject]@{
-    "serviceStart"    = $service_remediation
-    "serviceSddl"     = $sddl_service_remediation
-    "registrySddl"    = $sddl_registry_remediation
-    "noRemove"        = $noRemove_remediation
+    "serviceStart"      = $service_remediation
+    "serviceSddl"       = $sddl_service_remediation
+    "registrySddl"      = $sddl_registry_remediation
+    "systemComponent"   = $systemComponent_remediation
 } | ConvertTo-Json -Compress)
 
 exit 0
