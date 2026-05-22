@@ -1,3 +1,64 @@
+# =============================================================================
+# Script:   lockdown_remediation.ps1
+# Purpose:  Restores tamper resistance controls to all installed Cisco Secure
+#           Client modules and Duo Desktop components on Windows endpoints when
+#           configuration drift is detected. Used by Microsoft Intune as the
+#           remediation script in the CSC Lockdown remediation script pair.
+#
+# Overview:
+#   This script is functionally identical to lockdown.ps1 used during module
+#   installation and applies the same layered set of tamper resistance controls
+#   across four surfaces:
+#
+#     1. Service startup and state: Ensures all present targeted services are
+#        set to Automatic startup and are in a running state before protections
+#        are applied.
+#     2. SCM-level descriptor: Applies a restrictive SDDL string to each
+#        present targeted service via sc.exe sdset, limiting which accounts
+#        can interact with the service through the Service Control Manager.
+#     3. Registry ACL: Applies a deny-based ACL to each present service's
+#        registry key under HKLM\SYSTEM\CurrentControlSet\Services, preventing
+#        non-SYSTEM accounts from modifying the service configuration.
+#     4. Uninstall key protection: Sets the SystemComponent flag on all Cisco
+#        Secure Client and Duo Desktop uninstall registry entries to hide them
+#        from Add or Remove Programs, and applies a protective ACL to each
+#        entry to prevent unauthorized modification or removal.
+#
+#   This script is executed by Intune only when the paired lockdown detection
+#   script exits with code 1, indicating that one or more tamper resistance
+#   controls are missing or incorrect. It runs on the recurring schedule
+#   configured for the remediation script pair, ensuring that any configuration
+#   drift is automatically corrected within the next enforcement cycle.
+#
+# Usage:
+#   Uploaded as the remediation script of the CSC Lockdown remediation script
+#   pair in the Intune Remediations console. Can also be tested locally using
+#   PsExec in the SYSTEM account context:
+#   ./PsExec.exe -i -s powershell.exe -ExecutionPolicy Bypass -File "lockdown_remediation.ps1"; $LASTEXITCODE
+#
+# Configuration:
+#   - The $services array at the top of the script defines which services are
+#     targeted for lockdown remediation. This list must match the services
+#     defined in the paired lockdown_detection.ps1 script to ensure consistent
+#     detection and remediation behavior.
+#   - If your environment does not use all of the modules covered in this
+#     guide, remove the corresponding service entries from the array. If your
+#     environment includes additional Secure Client modules beyond those
+#     covered in this guide, add their service names to the array.
+#   - To identify the service name for a given Cisco Secure Client or Duo
+#     Desktop component, run the following command in PowerShell:
+#
+#       Get-Service | Where-Object { $_.DisplayName -like "*Cisco*" -or $_.DisplayName -like "*Duo*" } | Select-Object Name, DisplayName
+#
+# Exit Codes:
+#   0 — All tamper resistance controls have been successfully applied or
+#       were already in the correct state. Intune will record the remediation
+#       as successful.
+#   1 — Not explicitly returned by this script. Any failure during execution
+#       will result in an unhandled termination that Intune will record as
+#       a failed remediation.
+# =============================================================================
+
 [CmdletBinding()]
 param ()
 
