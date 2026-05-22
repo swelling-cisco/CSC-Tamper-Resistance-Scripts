@@ -86,28 +86,28 @@ $services | Where-Object { $_.exists -eq $true } | ForEach-Object {
     }
 }
 
-# Checks each Cisco Secure Client and Duo uninstall entry to confirm the NoRemove flag is set
-$noRemove_states = @()
+# Checks each Cisco Secure Client and Duo uninstall entry to confirm the SystemComponent flag is set
+$systemComponent_states = @()
 $installedModules = @(
     Get-ItemProperty HKLM:\Software\Microsoft\Windows\CurrentVersion\Uninstall\*, HKLM:\SOFTWARE\Wow6432Node\Microsoft\Windows\CurrentVersion\Uninstall\* -ErrorAction SilentlyContinue |
     Where-Object { ($_.DisplayName -like "Cisco Secure Client*") -or ($_.DisplayName -like "*Duo*") }
 )
 $installedModules | ForEach-Object {
     $module = $_
-    $noRemoveValue = $module.NoRemove
-    $noRemove_states += [PSCustomObject]@{
-        "moduleName"  = $module.DisplayName
-        "noRemoveSet" = ($noRemoveValue -eq 1)
+    $systemComponentValue = $module.SystemComponent
+    $systemComponent_states += [PSCustomObject]@{
+        "moduleName"         = $module.DisplayName
+        "systemComponentSet" = ($systemComponentValue -eq 1)
     }
 }
 
 # Emits all detection findings as a single compressed JSON object
 Write-Host ([PSCustomObject]@{
-    "missing"  = $missing_services
-    "states"   = $service_states
-    "services" = $securityDescriptors_services
-    "registry" = $securityDescriptors_registry
-    "noRemove" = $noRemove_states
+    "missing"         = $missing_services
+    "states"          = $service_states
+    "services"        = $securityDescriptors_services
+    "registry"        = $securityDescriptors_registry
+    "systemComponent" = $systemComponent_states
 } | ConvertTo-Json -Compress)
 
 # Returns exit code 1 if any present service is not in a running state
@@ -125,8 +125,8 @@ if ($securityDescriptors_registry.correctDescriptor -contains $false) {
     exit 1
 }
 
-# Returns exit code 1 if the NoRemove flag is absent on any Cisco Secure Client or Duo module
-if ($noRemove_states.noRemoveSet -contains $false) {
+# Returns exit code 1 if the SystemComponent flag is absent on any Cisco Secure Client or Duo module
+if ($systemComponent_states.systemComponentSet -contains $false) {
     exit 1
 }
 
