@@ -1,3 +1,94 @@
+# =============================================================================
+# Script:   disable_lockdown_remediation.ps1
+# Purpose:  Removes tamper resistance controls applied by the lockdown script
+#           from all installed Cisco Secure Client modules and Duo Desktop
+#           components on Windows endpoints when detected as active. Used by
+#           Microsoft Intune as the remediation script in the CSC Disable
+#           Lockdown remediation script pair.
+#
+# Overview:
+#   This script is functionally identical to disable_lockdown.ps1 used during
+#   module installation and uninstallation, with one key difference: in
+#   addition to restoring permissive SCM and registry descriptors, this script
+#   also removes the SystemComponent flag from all Cisco Secure Client and Duo
+#   Desktop uninstall registry entries. This allows modules to appear in Add
+#   or Remove Programs and be uninstalled by users or administrators if needed,
+#   which is the intended behavior when this script pair is deployed for
+#   administrative troubleshooting or user exemption purposes.
+#
+#   The script applies changes across three surfaces:
+#
+#     1. SCM-level descriptor: Restores standard SCM access permissions for
+#        SYSTEM, Administrators, Interactive Users, and Service accounts,
+#        allowing services to be stopped, started, and modified as needed.
+#     2. Registry ACL: Restores the original registry key permissions for each
+#        targeted service key by re-enabling ACL inheritance and removing all
+#        explicit Deny ACEs applied by the lockdown script. Two SDDL variants
+#        are used depending on the original key owner prior to lockdown:
+#          - registry_sy — for SYSTEM-owned keys (Cisco Secure Client services)
+#          - registry_ba — for Administrators-owned keys (acsock and Duo
+#            Desktop services)
+#     3. Uninstall key ACL and SystemComponent flag: Restores inherited
+#        permissions on all Cisco Secure Client and Duo Desktop uninstall
+#        registry entries by re-enabling ACL inheritance and removing all
+#        explicit Deny ACEs. Once the ACL has been restored, the SystemComponent
+#        flag is removed from each entry, making the modules visible in Add or
+#        Remove Programs. The SystemComponent flag is only removed after the ACL
+#        is restored to ensure the write operation is not blocked by the active
+#        deny rules.
+#
+#   This script requires elevated token privileges (SeRestorePrivilege,
+#   SeTakeOwnershipPrivilege, and SeTcbPrivilege) to take ownership of and
+#   modify registry keys that were locked down by the lockdown script. These
+#   privileges are enabled at runtime via an inline C# type definition.
+#
+#   This script is executed by Intune only when the paired disable lockdown
+#   detection script exits with code 1, indicating that one or more lockdown
+#   controls are still active. It should be scoped exclusively to specific
+#   user or device groups where temporary removal of tamper resistance controls
+#   is intentionally required, and its assignment should be removed promptly
+#   once the troubleshooting or exemption activity is complete.
+#
+#   WARNING: This script pair must never be assigned to the same device scope
+#   as the CSC Lockdown remediation script pair in Intune. Doing so will create
+#   a continuous enforcement conflict that undermines tamper resistance entirely.
+#   Refer to the Enforcing Remediation Scripts section of the guide for full
+#   details on safe scoping of this script pair.
+#
+# Usage:
+#   Uploaded as the remediation script of the CSC Disable Lockdown remediation
+#   script pair in the Intune Remediations console. Can also be tested locally
+#   using PsExec in the SYSTEM account context:
+#   ./PsExec.exe -i -s powershell.exe -ExecutionPolicy Bypass -File "disable_lockdown_remediation.ps1"; $LASTEXITCODE
+#
+# Configuration:
+#   - The $services array at the top of the script defines which services are
+#     targeted for lockdown removal. This list must match the services defined
+#     in the paired disable_lockdown_detection.ps1 script and should also
+#     match the services defined in the lockdown scripts to ensure consistent
+#     behavior across the full tamper resistance framework.
+#   - Each service entry includes a registrySddlKey property that controls
+#     which restored SDDL variant is applied to that service's registry key:
+#       - "registry_sy" — used for SYSTEM-owned service keys (Cisco Secure
+#         Client services: csc_vpnagent, csc_umbrellaagent, csc_swgagent,
+#         csc_zta_agent)
+#       - "registry_ba" — used for Administrators-owned service keys (acsock
+#         and Duo Desktop services)
+#   - To identify the service name for a given Cisco Secure Client or Duo
+#     Desktop component, run the following command in PowerShell:
+#
+#       Get-Service | Where-Object { $_.DisplayName -like "*Cisco*" -or $_.DisplayName -like "*Duo*" } | Select-Object Name, DisplayName
+#
+# Exit Codes:
+#   0 — All lockdown controls have been successfully removed. SCM descriptors
+#       and registry ACLs have been restored to their pre-lockdown state, and
+#       the SystemComponent flag has been removed from all uninstall entries.
+#       Intune will record the remediation as successful.
+#   1 — Not explicitly returned by this script. Any failure during execution
+#       will result in an unhandled termination that Intune will record as
+#       a failed remediation.
+# =============================================================================
+
 [CmdletBinding()]
 param ()
 
