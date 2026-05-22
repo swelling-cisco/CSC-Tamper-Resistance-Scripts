@@ -1,3 +1,46 @@
+# =============================================================================
+# Script:   zta_module_uninstall.ps1
+# Purpose:  Uninstalls the Cisco Secure Client Zero Trust Access (ZTA) module
+#           and Duo Desktop from Windows endpoints managed through Microsoft
+#           Intune.
+#
+# Overview:
+#   This script follows a three-phase sequence:
+#     1. Runs disable_lockdown.ps1 to remove any active tamper resistance
+#        controls from all Cisco Secure Client and Duo Desktop components.
+#     2. Silently uninstalls the ZTA module MSI, then silently uninstalls
+#        Duo Desktop if it is present on the endpoint. Duo Desktop is
+#        uninstalled alongside the ZTA module as it is a dependency of the
+#        ZTA module. If Duo Desktop is used for other purposes, the
+#        relevant uninstall commands can be removed or commented out.
+#     3. Runs lockdown.ps1 to reapply tamper resistance controls across all
+#        remaining installed Cisco Secure Client components.
+#
+#   Unlike the VPN uninstall script, this script only removes the ZTA module
+#   and Duo Desktop, leaving all other Secure Client modules intact. Tamper
+#   resistance controls are restored after uninstallation to ensure that
+#   any remaining modules retain their protected state.
+#
+#   This script is intended to be deployed as the uninstall command of the
+#   Cisco Secure Client ZTA Win32 application in Microsoft Intune.
+#
+# Usage:
+#   powershell.exe -NoProfile -ExecutionPolicy Bypass -File "zta_module_uninstall.ps1"
+#
+# Configuration:
+#   - Update $installerName to match the exact filename of the ZTA module
+#     MSI included in the .intunewin package for your target version.
+#     Example: "cisco-secure-client-win-arm64-5.1.15.4322-zta-predeploy-k9.msi"
+#
+# Requirements:
+#   - lockdown.ps1 must be present in the same directory as this script.
+#   - disable_lockdown.ps1 must be present in the same directory as this script.
+#   - The ZTA module MSI installer must be present in the same directory
+#     as this script.
+#   - Script must be executed in the SYSTEM account context, as is the case
+#     when deployed via Intune.
+# =============================================================================
+
 # Define the MSI installer filename (in the same directory as this script)
 $installerName = "cisco-secure-client-win-arm64-5.1.15.4322-zta-predeploy-k9.msi"
 
