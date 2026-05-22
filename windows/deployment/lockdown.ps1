@@ -1,3 +1,51 @@
+# =============================================================================
+# Script:   lockdown.ps1
+# Purpose:  Applies tamper resistance controls to all installed Cisco Secure
+#           Client modules and Duo Desktop components on Windows endpoints.
+#
+# Overview:
+#   This script is a shared utility invoked by all module install and uninstall
+#   scripts to enforce the full tamper resistance configuration. When executed,
+#   the script applies a layered set of security controls across three surfaces:
+#
+#     1. Service startup and state: Ensures all targeted services are set to
+#        Automatic startup and are running before protections are applied.
+#     2. SCM-level descriptor: Applies a restrictive SDDL string to each
+#        targeted service via sc.exe sdset, limiting which accounts can
+#        interact with the service through the Service Control Manager.
+#     3. Registry ACL: Applies a deny-based ACL to each service's registry
+#        key under HKLM\SYSTEM\CurrentControlSet\Services, preventing
+#        non-SYSTEM accounts from modifying the service configuration.
+#     4. Uninstall key protection: Sets the SystemComponent flag on all
+#        Cisco Secure Client and Duo Desktop uninstall registry entries to
+#        hide them from Add or Remove Programs, and applies a protective ACL
+#        to each entry to prevent unauthorized modification or removal.
+#
+#   This script is designed to be called as the final step of any Cisco Secure
+#   Client module install or uninstall operation, restoring the full tamper
+#   resistance configuration after changes have been made to the installation.
+#
+# Usage:
+#   powershell.exe -NoProfile -ExecutionPolicy Bypass -File "lockdown.ps1"
+#
+# Configuration:
+#   - The $services array at the top of the script defines which services are
+#     targeted for lockdown. By default, this includes all services associated
+#     with the VPN, Umbrella, ZTA, and Duo Desktop components as used in this
+#     guide. If your environment does not use all of these modules, remove the
+#     corresponding entries from the array. If your environment includes
+#     additional Secure Client modules beyond those covered in this guide,
+#     add their service names to the array.
+#   - To identify the service name for a given Cisco Secure Client or Duo
+#     Desktop component, run the following command in PowerShell:
+#
+#       Get-Service | Where-Object { $_.DisplayName -like "*Cisco*" -or $_.DisplayName -like "*Duo*" } | Select-Object Name, DisplayName
+#
+# Requirements:
+#   - Script must be executed in the SYSTEM account context, as is the case
+#     when deployed via Intune or invoked by the module install/uninstall scripts.
+# =============================================================================
+
 [CmdletBinding()]
 param ()
 
