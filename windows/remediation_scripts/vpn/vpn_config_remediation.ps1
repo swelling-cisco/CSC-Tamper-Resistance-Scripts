@@ -1,3 +1,66 @@
+# =============================================================================
+# Script:   vpn_config_remediation.ps1
+# Purpose:  Restores the Cisco Secure Client AnyConnect VPN connection profile
+#           to its authoritative baseline state on Windows endpoints when
+#           configuration drift is detected. Used by Microsoft Intune as the
+#           remediation script in the VPN Configuration remediation script pair.
+#
+# Overview:
+#   This script restores the VPN XML profile by performing the following steps:
+#
+#     1. Removes the existing VPN XML profile from the Cisco Secure Client
+#        VPN profile directory if it is present, ensuring a clean write.
+#     2. Creates the VPN profile directory if it does not already exist.
+#     3. Writes the authoritative VPN XML profile content to the correct
+#        path using UTF-8 encoding without BOM and LF line endings, ensuring
+#        that the resulting file produces a consistent and predictable SHA-256
+#        hash that matches the value configured in the paired detection script.
+#
+#   This script is executed by Intune only when the paired
+#   vpn_config_detection.ps1 script exits with code 1, indicating that the
+#   VPN profile is either absent or does not match the expected baseline hash.
+#
+# Usage:
+#   Uploaded as the remediation script of the VPN Configuration remediation
+#   script pair in the Intune Remediations console. Can also be tested
+#   locally using PsExec in the SYSTEM account context:
+#   ./PsExec.exe -i -s powershell.exe -ExecutionPolicy Bypass -File "vpn_config_remediation.ps1"; $LASTEXITCODE
+#
+# Configuration:
+#   - Update $XMLFileName to match the filename of the VPN XML profile used
+#     in your environment. This value must match the filename configured in
+#     the paired vpn_config_detection.ps1 script.
+#     Example: "Cert_Profile.xml"
+#   - Update the $XMLContent heredoc block with the complete and authoritative
+#     XML content of the VPN profile for your environment. The file content
+#     must be placed between the @' and '@ delimiters exactly as it should
+#     appear on disk. Do not add or remove whitespace, line breaks, or
+#     characters outside of those delimiters, as any change to the content
+#     will alter the SHA-256 hash of the written file and cause the paired
+#     detection script to continuously report a mismatch.
+#   - After finalizing the $XMLContent block, recalculate the expected SHA-256
+#     hash by deploying this remediation script to a test device and running
+#     the following command in PowerShell to obtain the hash of the written
+#     file:
+#
+#       (Get-FileHash -Path "C:\ProgramData\Cisco\Cisco Secure Client\VPN\Profile\Cert_Profile.xml" -Algorithm SHA256).Hash
+#
+#     Enter the resulting value as the $ExpectedHash in the paired
+#     vpn_config_detection.ps1 script. If the $XMLContent block is updated
+#     in the future, this process must be repeated and the $ExpectedHash
+#     value must be updated accordingly.
+#   - $VPNProfileFolder defines the directory where the VPN XML profile will
+#     be written. This value should not be changed.
+#
+# Exit Codes:
+#   0 — The VPN XML profile has been successfully written to the expected
+#       path and confirmed as present on disk. Intune will record the
+#       remediation as successful.
+#   1 — The VPN XML profile was not found on disk after the write operation
+#       completed, indicating that the remediation did not succeed. Intune
+#       will record the remediation as failed and retry on the next cycle.
+# =============================================================================
+
 [CmdletBinding()]
 param ()
 
