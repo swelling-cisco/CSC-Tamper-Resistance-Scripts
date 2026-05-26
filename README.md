@@ -325,4 +325,3 @@ This code is licensed under the Cisco Sample Code License. See
 - [Jamf Pro Documentation](https://learn.jamf.com)
 - [Apple Platform Security Guide](https://support.apple.com/guide/security/welcome/web)
 - [Microsoft Sysinternals](https://learn.microsoft.com/en-us/sysinternals/)
-```
