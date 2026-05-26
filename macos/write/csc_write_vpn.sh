@@ -18,9 +18,7 @@
 #   The XML profile content is embedded directly within the script and
 #   defines all VPN client initialization parameters and server list
 #   entries required for Cisco Secure Client to establish a VPN connection
-#   to the headend. This script does not restart any services after
-#   writing the profile. The VPN module will read the updated profile on
-#   its next connection attempt.
+#   to the headend.
 #
 #   This script is intended to be assigned to a dedicated Jamf Pro policy
 #   configured with a custom event trigger that exactly matches the
