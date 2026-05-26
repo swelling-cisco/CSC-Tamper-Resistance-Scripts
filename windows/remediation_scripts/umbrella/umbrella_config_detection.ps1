@@ -49,7 +49,7 @@
 #   - $UmbrellaFolder and $JSONFileName define the expected location and
 #     filename of the OrgInfo.json file. These values reflect the default
 #     Cisco Secure Client Umbrella installation path and should not be
-#     modified unless the installation directory has been customized.
+#     modified.
 #
 # Exit Codes:
 #   0 — OrgInfo.json is present and its SHA-256 hash matches the expected
