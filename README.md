@@ -277,9 +277,6 @@ Inspect the shared enforcement state file to verify compliance tracking:
 defaults read /Library/Application\ Support/SecureClientEnforcement/csc_enforcement_state.plist
 ```
 
-Once validation is complete, expand the scope of all policies to your full
-managed fleet in a staged rollout.
-
 ## Related Resources
 
 - [Cisco Secure Client Administrator Guide](https://www.cisco.com/c/en/us/support/security/anyconnect-secure-mobility-client/products-installation-and-configuration-guides-list.html)
