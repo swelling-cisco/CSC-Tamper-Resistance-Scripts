@@ -287,29 +287,6 @@ defaults read /Library/Application\ Support/SecureClientEnforcement/csc_enforcem
 - [Microsoft Sysinternals PsTools](https://learn.microsoft.com/en-us/sysinternals/downloads/pstools)
 - [Jamf Pro Documentation](https://learn.jamf.com/bundle/jamf-pro-documentation-current/page/Jamf_Pro_Documentation.html)
 
-## Known Issues
-
-- The tamper resistance controls implemented by these scripts rely on MDM
-  platform capabilities and cannot prevent modification by users or processes
-  with sufficient local administrative privileges. These scripts are designed
-  to detect and recover from tampering, not to prevent it absolutely.
-  Minimizing local administrative access is the most effective complementary
-  control.
-- On macOS, Cisco Secure Client is inherently resistant to service interruption
-  due to processes automatically restarting when terminated. Service-level
-  tampering simulation for validation purposes is best achieved by uninstalling
-  a module directly rather than attempting to stop individual processes.
-- The csc_swgagent binary will remain inactive on macOS devices where only DNS
-  is enabled in the Secure Access organization and SWG is not. If SWG is not
-  enabled in your environment, the `csc_swgagent` entry must be removed from
-  the `scBinaries` array in `csc_module_enforcement.sh` before deployment to
-  prevent continuous unnecessary remediation cycles.
-- The version string reported by `csc_module_enforcement.sh` reflects the
-  CFBundleShortVersionString of the Cisco Secure Client GUI application bundle
-  and may differ from the version of the individual module installer packages.
-  Verify the exact version string on a device with the target version installed
-  before configuring the minimum version parameter.
-
 ## License
 
 This code is licensed under the Cisco Sample Code License. See
