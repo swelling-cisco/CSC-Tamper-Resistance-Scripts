@@ -292,7 +292,7 @@ defaults read /Library/Application\ Support/SecureClientEnforcement/csc_enforcem
 This code is licensed under the Cisco Sample Code License. See
 [LICENSE](./LICENSE) for details.
 
-## Credits and References
+## References
 
 - [Cisco Secure Client Product Page](https://www.cisco.com/c/en/us/products/security/anyconnect-secure-mobility-client/index.html)
 - [Microsoft Intune Documentation](https://learn.microsoft.com/en-us/mem/intune/)
