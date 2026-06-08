@@ -5,7 +5,8 @@ controls for Cisco Secure Client on Windows and macOS endpoints. These scripts
 enforce the integrity of Secure Client module installations, service states, and
 configuration files through Microsoft Intune on Windows and Jamf Pro on macOS,
 providing automated detection, remediation, and recovery of unauthorized or
-unintended changes to the Secure Client deployment.
+unintended changes to the Secure Client deployment. This repository is meant to
+complement the [Cisco Secure Client Tamper Resistance Guide](https://www.cisco.com/c/en/us/products/collateral/security/secure-access/secure-client-tamper-resistance-guide.html).
 
 ## Use Case
 
